@@ -1,5 +1,5 @@
-#This is a very simple QR Code Genertor for making QR Codes
-#By Tom Knudsen - 2024
+#This is a simple QR Code Generator made by Tom Knudsen 2024
+#Version 1.0.2
 
 import tkinter as tk
 from tkinter import filedialog
@@ -9,7 +9,7 @@ import tkinter.simpledialog
 import tkinter.messagebox
 import pyperclip
 
-#Class app for QR Code Generator
+#This will initialisize the app, set root geometry and define functions. 
 class QRCodeGeneratorApp:
     def __init__(self, root):
         self.root = root
@@ -42,15 +42,27 @@ class QRCodeGeneratorApp:
         exit_button = tk.Button(self.root, text="Exit", command=self.root.destroy)
         exit_button.grid(row=4, column=1, padx=10, pady=10)
 
-        # This will output an image to the window on the right side based on the text you input
+        # Image widget to display QR code
         self.qr_image_label = tk.Label(self.root, text="QR Code will be displayed here.")
         self.qr_image_label.grid(row=0, column=2, padx=10, pady=10, rowspan=5)
 
-        # Outputs the Status label to the window
+        # Status label
         self.status_label = tk.Label(self.root, text="Status: Ready")
         self.status_label.grid(row=5, column=0, columnspan=3, pady=10)
 
-#This will begin to generate the qr code
+        # Original Image
+        self.qr_image = None
+#This will clear all fields in the window, including the image. 
+    def clear_field(self):
+        self.text_entry.delete("1.0", tk.END)
+        self.qr_image_label.config(image=None, text="QR Code will be displayed here.")
+        self.qr_image_label.image = None  # Set image to None to clear it
+        self.qr_image = None
+        self.update_status("Status: Cleared")
+
+
+
+#This will generate the actual qr code
     def generate_qr_code(self):
         data = self.text_entry.get("1.0", tk.END).strip()
 
@@ -61,38 +73,42 @@ class QRCodeGeneratorApp:
                 qr.make(fit=True)
                 img = qr.make_image(fill_color="black", back_color="white")
 
-                # Resize the QR code image
-                img = img.resize(self.qr_preview_size)
+                # Resize the QR code image for display
+                img_display = img.resize(self.qr_preview_size)
 
-                # Display QR code on the right side
-                img = ImageTk.PhotoImage(img)
-                self.qr_image_label.config(image=img, text="")
-                self.qr_image_label.image = img
+                # Save the original Image
                 self.qr_image = img
+
+                # Convert to PhotoImage for display
+                img_tk = ImageTk.PhotoImage(img_display)
+                self.qr_image_label.config(image=img_tk, text="")
+                self.qr_image_label.image = img_tk
+
                 self.update_status("Status: QR Code generated successfully!")
+
+                # Create a new Image object for saving with the specified size (640x480)
+                resized_img = Image.new("RGB", (640, 480), "white")
+                resized_img.paste(img, ((640 - img.width) // 2, (480 - img.height) // 2))
+                # resized_img.save("output.png")  # You can change the filename and path as needed
+
             except Exception as e:
                 self.update_status(f"Status: An error occurred - {e}")
         else:
             self.update_status("Status: Please enter data before generating a QR Code.")
-#Function to save the qr code to disk in PNG format
+
+#saves the image to disk as png
     def save_qr_code(self):
-        if hasattr(self, 'qr_image'):
-            file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
-            if file_path:
-                self.qr_image_label.image.write(file_path)
-                self.update_status("Status: QR Code saved successfully!")
+        if self.qr_image:
+            try:
+                file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
+                if file_path:
+                    self.qr_image.save(file_path)
+                    self.update_status("Status: QR Code saved successfully!")
+            except Exception as e:
+                self.update_status(f"Status: Error saving QR Code - {e}")
         else:
             self.update_status("Status: Generate a QR Code first before trying to save.")
-#This function will again clear all fields. 
-    def clear_field(self):
-        self.text_entry.delete("1.0", tk.END)
-        self.qr_image_label.config(image=None, text="QR Code will be displayed here.")
-        if hasattr(self, 'qr_image'):
-            self.qr_image_label.image = None
-            self.qr_image_label.config(image=None)
-            delattr(self, 'qr_image')
-        self.update_status("Status: Cleared")
-#This function will allow you to paste inn text into the input field. 
+
     def paste_text(self):
         try:
             text_to_paste = self.root.clipboard_get()
@@ -103,7 +119,8 @@ class QRCodeGeneratorApp:
 
     def update_status(self, message):
         self.status_label.config(text=message)
-#Initialization of the tkinter window
+
+#initialize the loop
 if __name__ == "__main__":
     root = tk.Tk()
     app = QRCodeGeneratorApp(root)
